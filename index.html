@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Production Tools – Main</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#eef3ff; --bg2:#dfeaff;
+      --card:#ffffffee; --text:#12223f; --muted:#5b6b86;
+      --primary:#0d6efd; --primary-2:#845ef7;
+      --ring:#cfe2ff; --shadow:0 20px 60px rgba(13,110,253,.15);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:'Prompt',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(13,110,253,.13) 0, rgba(13,110,253,0) 60%),
+        radial-gradient(1000px 600px at 100% 20%, rgba(132,94,247,.18) 0, rgba(132,94,247,0) 55%),
+        linear-gradient(135deg,var(--bg),var(--bg2));
+    }
+    .wrap{max-width:1100px;margin:auto;padding:24px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{
+      width:48px;height:48px;border-radius:14px;
+      background: conic-gradient(from 180deg at 50% 50%, #0ea5e9, #6366f1,#22d3ee,#0ea5e9);
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+    .title{font-weight:700;letter-spacing:.2px;font-size:1.25rem}
+    .sub{font-size:.95rem;color:var(--muted)}
+    .badge{background:#eef4ff;border:1px solid #d5e6ff;color:#1f3b73;padding:2px 10px;border-radius:999px;font-size:.8rem}
+
+    .hero{
+      position:relative; overflow:hidden; border-radius:20px; padding:26px 20px;
+      background:linear-gradient(135deg, #ffffffcc, #ffffff99);
+      border:1px solid #ebf1ff; box-shadow: var(--shadow);
+    }
+    .hero h1{margin:0 0 6px 0;font-size:1.6rem}
+    .hero p{margin:0;color:#35507a}
+    .hero .cta{margin-top:12px; display:flex; gap:10px; flex-wrap:wrap}
+    .btn{appearance:none;border:none;cursor:pointer;font-weight:700;border-radius:12px;padding:12px 16px;min-height:44px}
+    .btn-primary{
+      color:#fff;background:linear-gradient(135deg,var(--primary),#0a58ca);
+      box-shadow:0 12px 30px rgba(13,110,253,.35); border:1px solid #0d6efd22;
+    }
+    .btn-ghost{background:#f2f6ff;color:#1f3b73;border:1px solid #d6e4ff}
+    .btn:focus{outline:none; box-shadow:0 0 0 4px var(--ring)}
+
+    .grid{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:16px; margin-top:18px}
+    @media (max-width:960px){ .grid{grid-template-columns: repeat(2, minmax(0,1fr));} }
+    @media (max-width:640px){ .grid{grid-template-columns: 1fr;} }
+
+    .card{
+      position:relative; background:var(--card); border:1px solid #e7eeff;
+      border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover{ transform: translateY(-2px); border-color:#cfe0ff; box-shadow:0 24px 70px rgba(13,110,253,.18); }
+    .card h3{margin:6px 0 6px 0; font-size:1.05rem}
+    .card p{margin:0; color:var(--muted); font-size:.95rem}
+    .card .pill{display:inline-flex;align-items:center;gap:6px; font-size:.8rem; background:#f1f6ff; border:1px solid #ddebff; color:#274062; padding:4px 10px; border-radius:999px}
+    .card .go{
+      margin-top:12px; display:inline-flex; gap:8px; align-items:center; text-decoration:none;
+      background:linear-gradient(135deg,var(--primary),var(--primary-2));
+      color:#fff; padding:10px 14px; border-radius:12px; font-weight:700; border:1px solid #0000;
+    }
+    .card .go:focus{outline:none; box-shadow:0 0 0 4px var(--ring)}
+    .footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:.9rem}
+    .switch{display:flex;align-items:center;gap:10px}
+    .toggle {appearance:none;width:52px;height:30px;border-radius:999px;background:#e6efff;position:relative;cursor:pointer;border:1px solid #d5e2ff}
+    .toggle:before{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:all .2s}
+    .toggle:checked{background:#cfe0ff}
+    .toggle:checked:before{left:25px}
+    .dim{opacity:.7}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">Packing Pipe B12</div>
+          <div class="sub dim">ระบบจัดการ แผนกแพ็ค และฝ่ายผลิต</div>
+        </div>
+      </div>
+      <div class="badge">ภายในองค์กร</div>
+    </header>
+
+    <section class="hero" aria-label="overview">
+      <h1>ยินดีต้อนรับสู่ศูนย์เครื่องมือ</h1>
+      <p>เลือกใช้เครื่องมือที่ต้องการด้านล่าง — เร็ว ใช้ง่าย ปลอดภัยในเครือข่าย</p>
+      <div class="cta">
+        <a href="tagfgt.html" class="btn btn-primary">เริ่มสร้าง Label FGT</a>
+        <a href="#tools" class="btn btn-ghost">ดูรายการทั้งหมด</a>
+      </div>
+    </section>
+
+    <section id="tools" class="grid" aria-label="tools list">
+      <!-- Tool 1 -->
+      <article class="card">
+        <span class="pill">🏷️ Production</span>
+        <h3>TAG – Production Label</h3>
+        <p>สร้างป้ายกล่องพร้อม QR อัตโนมัติ รองรับฐานข้อมูล Excel และบันทึกค่าตาม PART</p>
+        <a class="go" href="tagfgt.html" aria-label="ไปที่ TAG FGT">
+          ใช้งานเลย ▶
+        </a>
+      </article>
+
+      <!-- ตัวอย่างช่องว่างสำหรับเครื่องมืออื่นในอนาคต -->
+      <article class="card">
+        <span class="pill">📦 Sell</span>
+        <h3>Report of finished Good products/for sale</h3>
+        <p>รายงาน สินค้าสำเร็จรูป/รอขาย (กำลังพัฒนา)</p>
+        <a class="go" href="wipfg.html" aria-label="ไปที่ TAG FGT">
+          ใช้งานเลย ▶
+        </a>
+      </article>
+
+      <article class="card">
+        <span class="pill">📈 Report</span>
+        <h3>Daily Output Dashboard</h3>
+        <p>แดชบอร์ดรายวันเชื่อม Google Sheet แสดงเป้าและผลผลิต (กำลังเชื่อมต่อ)</p>
+        <a class="go" href="#" onclick="alert('อยู่ระหว่างเชื่อมต่อ');return false;">เร็ว ๆ นี้</a>
+      </article>
+    </section>
+
+    <div class="footer">
+      <div>© SNC Creativity Anthology • Tools Portal</div>
+      <label class="switch">
+        <input id="tone" class="toggle" type="checkbox" aria-label="ลดแสงพื้นหลัง">
+        <span>ลดแสง</span>
+      </label>
+    </div>
+  </div>
+
+  <script>
+    // โหมด "ลดแสง" แบบง่าย ๆ (ไม่ใช่ดาร์กโหมดเต็มรูปแบบ)
+    const t = document.getElementById('tone');
+    t.addEventListener('change', () => {
+      document.body.style.background =
+        t.checked
+          ? 'linear-gradient(135deg, #f7f9ff, #e9f0ff)'
+          : 'linear-gradient(135deg, #eef3ff, #dfeaff)';
+      document.querySelectorAll('.dim').forEach(el => el.style.opacity = t.checked ? .55 : .7);
+    });
+  </script>
+</body>
+</html>

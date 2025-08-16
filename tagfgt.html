@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TAG FGT – Production Label Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/polyfills.utf8.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- QRCode library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root{--bg:#f6f9ff;--card:#fff;--text:#1f2a44;--muted:#6b7a90;--primary:#0d6efd;--primary-dark:#0a58ca;--ring:#cfe2ff;--surface:#f2f6ff}
+    *{box-sizing:border-box}
+    html,body{margin:0;font-family:'Prompt',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(1200px 600px at 20% 0%,#eef4ff 0,#f8fbff 35%,var(--bg) 100%);min-height:100svh;padding:24px 24px 32px}
+    .wrap{width:100%;max-width:1100px;margin-inline:auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#00b4d8,#48cae4);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .title{font-weight:700;letter-spacing:.3px}
+    .sub{font-size:.95rem;color:var(--muted)}
+    .badge{display:inline-block;background:#ecf3ff;color:#21416b;padding:2px 8px;border-radius:999px;font-size:.8rem;border:1px solid #d3e4ff}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 16px 40px rgba(13,110,253,.08),0 2px 10px rgba(10,88,202,.05);overflow:hidden;border:1px solid #eef2f7}
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #eef2f7}
+    .card-head h2{margin:0;font-size:1.1rem}
+    .card-body{padding:18px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .panel{background:var(--surface);border:1px solid #ecf1f9;border-radius:14px;padding:14px}
+    .panel h3{margin:0 0 10px 0;font-size:1rem}
+    label{font-weight:600;font-size:.95rem;margin-bottom:6px;display:block}
+    input,select{width:100%;padding:12px 14px;border:1px solid #d7dfeb;border-radius:12px;font-size:1rem;background:#fff}
+    input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--ring)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:600px){.row{grid-template-columns:1fr}}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+    button{appearance:none;border:none;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;min-height:44px}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .btn-ghost{background:#f1f5ff;color:#294172;border:1px solid #d6e4ff}
+    .btn-danger{background:#ffe8ea;color:#a61b29;border:1px solid #ffc2c8}
+    .hint{font-size:.9rem;color:var(--muted);margin-top:6px}
+    .preview{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:start;margin-top:6px}
+    .thumb{width:100%;max-width:140px;aspect-ratio:11/10;border-radius:10px;border:1px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff}
+    .thumb img{max-width:100%;max-height:100%;display:block}
+    .kv{font-size:.95rem}
+    .kv div{margin:4px 0}
+    footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-top:1px solid #eef2f7}
+    .foot-note{font-size:.85rem;color:var(--muted)}
+    .stats{font-size:.9rem;color:#274062}
+    .combo{position:relative}
+    .combo-input{padding-right:40px}
+    .combo-btn{position:absolute;right:6px;top:6px;width:36px;height:36px;border-radius:10px;border:1px solid #d7dfeb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .combo-list{position:absolute;z-index:10;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #d7dfeb;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.08);max-height:260px;overflow:auto;display:none}
+    .combo.open .combo-list{display:block}
+    .combo-item{padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+    .combo-item:hover,.combo-item.active{background:#eef5ff}
+    .combo-empty{padding:10px 12px;color:#6b7a90}
+    .part-pill{font-size:.78rem;background:#f2f6ff;border:1px solid #e1e9ff;color:#274062;border-radius:999px;padding:1px 6px}
+    .kbd{font-size:.75rem;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:0 6px}
+    .toast{position:fixed;right:20px;bottom:20px;background:#16a34a;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.16);border:1px solid rgba(0,0,0,.06);font-weight:700;font-size:.95rem;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .25s ease,transform .25s ease;z-index:9999}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .actions-primary{position:sticky;bottom:-14px;padding-top:12px;margin-top:12px;background:linear-gradient(to top,var(--surface) 70%,rgba(242,246,255,0));border-top:1px solid #e3e9f6;z-index:5}
+    .db-admin{margin-top:12px}
+    .db-admin summary{cursor:pointer;font-weight:700;padding:8px 0}
+    .db-scroll{max-height:260px;overflow:auto;border:1px solid #e9eef8;border-radius:10px;background:#fff;margin-top:8px}
+    .table{width:100%;border-collapse:collapse;font-size:.92rem}
+    .table th,.table td{border:1px solid #e5ecf7;padding:8px 10px;text-align:left}
+    .table th{background:#f7faff;position:sticky;top:0;z-index:1}
+    .tr-click:hover{background:#f0f7ff;cursor:pointer}
+    .actions .spacer{flex:1}
+    .is-locked{background:#f9fafb;color:#6b7280;border-style:dashed;cursor:not-allowed}
+    .is-locked::placeholder{color:#94a3b8}
+  </style>
+</head>
+<body>
+<a href="../Pages/index.html" style="text-decoration:none">
+  <button style="margin:10px; padding:8px 12px; font-size:14px;">⬅️ กลับหน้าแรก</button>
+</a>
+
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">SNC Creativity Anthology</div>
+          <div class="sub">TAG FGT – Production Label Generator</div>
+        </div>
+      </div>
+      <div class="badge">เวอร์ชันเว็บใช้งานในองค์กร</div>
+    </header>
+
+    <section class="card" role="region" aria-label="TAG FGT Generator">
+      <div class="card-head">
+        <h2>1) เลือก PART • 2) ใส่จำนวน • 3) ดาวน์โหลด</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid">
+          <!-- LEFT: Form panel -->
+          <div class="panel">
+            <h3>เลือก PART NO.</h3>
+            <div class="combo" id="partCombo" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+              <label for="partnoInput">PART NO.</label>
+              <input id="partnoInput" class="combo-input" type="text" placeholder="พิมพ์เพื่อค้นหา… (เช่น B12)" autocomplete="off" aria-autocomplete="list" aria-controls="partList">
+              <button type="button" class="combo-btn" id="comboToggle" aria-label="เปิดรายการ">▾</button>
+              <div id="partList" class="combo-list" role="listbox"></div>
+              <div class="hint">ปุ่มลัด: <span class="kbd">↑</span>/<span class="kbd">↓</span> เลื่อน • <span class="kbd">Enter</span> เลือก • <span class="kbd">Esc</span> ปิด</div>
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <div>
+                <label for="lot">LOT NO. (จำนวนรวม)</label>
+                <input type="text" id="lot" placeholder="เช่น 250" required>
+              </div>
+              <div>
+                <label for="po">P/O NO.</label>
+                <input type="text" id="po" placeholder="เลขที่ใบสั่งซื้อ" required>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label for="perbox">จำนวนต่อกล่อง</label>
+                <input type="number" id="perbox" value="100" min="1" step="1" required>
+              </div>
+              <div>
+                <label for="packer">PACKED BY</label>
+                <input type="text" id="packer" placeholder="ชื่อผู้แพ็ค (ตัวเลือก)">
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label for="date">วันที่ (Production & Delivery)</label>
+                <input type="date" id="date" required>
+              </div>
+              <div>
+                <label for="bgcolor">สีพื้นหลัง (PDF)</label>
+                <select id="bgcolor">
+                  <option value="#ffffff">ขาว</option>
+                  <option value="#fffacd">เหลือง</option>
+                  <option value="#add8e6">ฟ้า</option>
+                  <option value="#ffc0cb">ชมพู</option>
+                </select>
+              </div>
+            </div>
+
+            <hr style="margin:16px 0; border:none; border-top:1px dashed #d7dfeb">
+            <h3>ฐานข้อมูลจาก Excel</h3>
+            <label for="excel">อัปเดตฐานข้อมูล (.xlsx / .xls)</label>
+            <input type="file" id="excel" accept=".xlsx,.xls">
+            <div class="actions">
+              <button type="button" class="btn-ghost" id="loadExcel">📚 อัปเดตฐานข้อมูล</button>
+              <button type="button" class="btn-ghost" id="clearDB">🗑️ ล้างฐานข้อมูล</button>
+            </div>
+
+            <details class="db-admin">
+              <summary>➕ เพิ่ม/แก้ไขฐานข้อมูล (Manual)</summary>
+              <div class="hint">กรอก PART NO., PART NAME, จำนวนต่อกล่องมาตรฐาน (ถ้ามี) และ/หรือรูป แล้วกดบันทึก • คลิกแถวด้านล่างเพื่อแก้ไข</div>
+              <div class="row">
+                <div>
+                  <label for="dbNo">PART NO.</label>
+                  <input id="dbNo" placeholder="เช่น 93xxxxxx" autocomplete="off">
+                </div>
+                <div>
+                  <label for="dbName">PART NAME</label>
+                  <input id="dbName" placeholder="เช่น BRACKET HOLDER" autocomplete="off">
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <label for="dbPerBox">จำนวนต่อกล่องมาตรฐาน</label>
+                  <input type="number" id="dbPerBox" min="1" step="1" placeholder="เช่น 100">
+                </div>
+                <div></div>
+              </div>
+              <div class="row">
+                <div>
+                  <label for="dbImgUrl">Image URL (ตัวเลือก)</label>
+                  <input id="dbImgUrl" placeholder="วางลิงก์รูปภาพ หรือเว้นว่าง">
+                </div>
+                <div>
+                  <label for="dbImgFile">อัปโหลดรูป (ตัวเลือก)</label>
+                  <input type="file" id="dbImgFile" accept="image/*">
+                </div>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn-primary" id="dbSave">💾 บันทึก/อัปเดต</button>
+                <button type="button" class="btn-ghost" id="dbClearForm">🧽 ล้างฟอร์ม</button>
+                <button type="button" class="btn-danger" id="dbDelete">🗑️ ลบรายการนี้</button>
+                <span class="spacer"></span>
+              </div>
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="dbSearch">ค้นหา</label>
+                  <input id="dbSearch" placeholder="ค้นหา PART NO. / PART NAME">
+                </div>
+              </div>
+              <div class="db-scroll" id="dbTableWrap">
+                <table class="table" id="dbTable">
+                  <thead><tr><th>#</th><th>PART NO.</th><th>PART NAME</th><th>ต่อกล่อง</th><th>รูป</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </details>
+
+            <hr style="margin:16px 0; border:none; border-top:1px dashed #d7dfeb">
+            <div class="actions actions-primary" style="margin-top:12px">
+              <button type="button" class="btn-primary" id="btnDownload">⬇️ ดาวน์โหลด PDF</button>
+              <button type="button" class="btn-ghost" id="clearMemory">🧹 ล้างความจำ PART นี้</button>
+              <button type="button" class="btn-danger" id="resetForm">↺ รีเซ็ตฟอร์ม</button>
+            </div>
+          </div>
+
+          <!-- RIGHT: Preview/info -->
+          <div class="panel">
+            <h3>พรีวิว & ข้อมูลที่จำไว้</h3>
+            <div class="preview">
+              <div class="thumb" id="thumb" tabindex="0"><span style="font-size:.85rem;color:#9aa7b2">ไม่มีรูป</span></div>
+              <div class="kv" id="kv">
+                <div>PART NO.: <span class="badge" id="kvPartno">-</span></div>
+                <div>PART NAME: <span class="badge" id="kvPartname">-</span></div>
+                <div>Standrad Box: <span class="badge" id="kvPerbox">-</span></div>
+                <div>พื้นหลัง PDF: <span class="badge" id="kvBg">ขาว</span></div>
+                <div>สถานะ: <span class="badge" id="kvStatus">เลือก PART ก่อน</span></div>
+                <div class="stats">กล่องที่จะพิมพ์: <span id="statBoxes">0</span> กล่อง | กล่องสุดท้าย: <span id="statLastQty">-</span> ชิ้น</div>
+                <div class="stats">ฐานข้อมูล: <span id="dbStat">-</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="foot-note">ระบบจะจำข้อมูลตาม PART NO. ในเบราว์เซอร์นี้เท่านั้น</div>
+        <div class="foot-note">Tip: กด <span class="kbd">Enter</span> เพื่อเลือกจากช่องค้นหา</div>
+      </footer>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- BEGIN: embedded readable source for Blob bundling -->
+  <template id="bundle-src">
+    <script>
+    'use strict';
+    function formatDate(dateString){ if(!dateString) return ''; var p=dateString.split('-'); return p.length===3? (p[2]+'/'+p[1]+'/'+p[0]) : dateString; }
+    function validateNumber(str){ return /^\d+$/.test(str); }
+    function hexToRgb(hex){ var c=hex.replace('#',''); var n=parseInt(c,16); return {r:(n>>16)&255, g:(n>>8)&255, b:n&255}; }
+    function arrayBufferToBase64(buf){ var binary=''; var bytes=new Uint8Array(buf); var chunk=0x8000; for(var i=0;i<bytes.length;i+=chunk){ binary+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); } return btoa(binary); }
+    function urlToDataURL(url){ return fetch(url,{mode:'cors'}).then(function(res){return res.blob()}).then(function(blob){return new Promise(function(ok){var r=new FileReader(); r.onload=function(){ok(r.result)}; r.readAsDataURL(blob);})}).catch(function(){return null}); }
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]); }); }
+    function loadImageMeta(dataUrl){ return new Promise(function(resolve,reject){ var img=new Image(); img.onload=function(){ resolve({w:img.width,h:img.height,src:dataUrl}); }; img.onerror=reject; img.src=dataUrl; }); }
+    function makeQRDataUrl(text, sizePx){
+      try{
+        var holder=document.createElement('div');
+        new QRCode(holder,{text:text,width:sizePx,height:sizePx,correctLevel:QRCode.CorrectLevel.M});
+        var img=holder.querySelector('img'); if(img && img.src) return img.src;
+        var canvas=holder.querySelector('canvas'); if(canvas) return canvas.toDataURL('image/png');
+      }catch(e){ console.warn('สร้าง QR ไม่สำเร็จ', e); }
+      return null;
+    }
+    </script>
+
+    <script>
+    'use strict';
+    var DB_KEY='db_master_v1';
+    function getDB(){ try{ return JSON.parse(localStorage.getItem(DB_KEY)||'{}'); }catch(e){ return {}; } }
+    function setDB(obj){ localStorage.setItem(DB_KEY, JSON.stringify(obj||{})); updateDBStat(); rebuildPartnoPicker(); }
+    function updateDBStat(){ var db=getDB(); var c=Object.keys(db).length; var el=document.getElementById('dbStat'); if(el) el.textContent=c>0? (c+' รายการ'):'-'; }
+
+    function getPartData(partno){ var d=localStorage.getItem('partData_'+partno); return d? JSON.parse(d): null; }
+    function savePartData(partno, partname, imageData, perbox){
+      var prev=getPartData(partno)||{}; var db=getDB(); var out={};
+      out.partname=(typeof partname!=='undefined')? partname: prev.partname;
+      out.imageData=(typeof imageData!=='undefined')? imageData: prev.imageData;
+      var dbPer=(db[partno]&&db[partno].perbox);
+      out.perbox=(typeof perbox!=='undefined' && perbox!=null)? perbox : (prev.perbox!=null? prev.perbox : (dbPer||null));
+      localStorage.setItem('partData_'+partno, JSON.stringify(out));
+    }
+    function getStoredPerBox(pn){ if(!pn) return null; var d=getPartData(pn), db=getDB(); var v=(d&&+d.perbox>0?+d.perbox:(db[pn]&&+db[pn].perbox>0?+db[pn].perbox:null)); return v||null; }
+
+    var sarabunLoaded=false;
+    </script>
+
+    <script>
+    'use strict';
+    var thumb=document.getElementById('thumb');
+    var kvPartno=document.getElementById('kvPartno');
+    var kvPartname=document.getElementById('kvPartname');
+    var kvPerbox=document.getElementById('kvPerbox');
+    var kvBg=document.getElementById('kvBg');
+    var kvStatus=document.getElementById('kvStatus');
+    var statBoxes=document.getElementById('statBoxes');
+    var statLastQty=document.getElementById('statLastQty');
+    var inputLot=document.getElementById('lot');
+    var inputPerBox=document.getElementById('perbox');
+
+    var combo=document.getElementById('partCombo');
+    var comboInput=document.getElementById('partnoInput');
+    var comboList=document.getElementById('partList');
+    var comboToggle=document.getElementById('comboToggle');
+    var allParts=[];
+    var activeIndex=-1;
+
+    function filterParts(q){ q=(q||'').trim().toLowerCase(); if(!q) return allParts.slice(0,300); return allParts.filter(function(it){ return it.no.toLowerCase().indexOf(q)>-1 || (it.name && it.name.toLowerCase().indexOf(q)>-1); }).slice(0,300); }
+    function renderList(items){
+      comboList.innerHTML='';
+      if(!items.length){
+        var emp=document.createElement('div'); emp.className='combo-empty'; emp.textContent='ไม่พบรายการ';
+        comboList.appendChild(emp); activeIndex=-1; return;
+      }
+      items.forEach(function(it,idx){
+        var div=document.createElement('div'); div.className='combo-item'; div.setAttribute('role','option'); div.dataset.index=String(idx);
+        div.innerHTML='<span class="part-pill">'+it.no+'</span> '+(it.name?('<span>'+it.name+'</span>'):'');
+        div.addEventListener('mousedown', function(e){ e.preventDefault(); chooseItem(it); });
+        comboList.appendChild(div);
+      });
+      activeIndex=0; highlightActive();
+    }
+    function openList(){ combo.classList.add('open'); combo.setAttribute('aria-expanded','true'); }
+    function closeList(){ combo.classList.remove('open'); combo.setAttribute('aria-expanded','false'); activeIndex=-1; }
+    function highlightActive(){
+      var nodes=comboList.querySelectorAll('.combo-item');
+      nodes.forEach(function(n){ n.classList.remove('active');});
+      if(activeIndex>=0 && nodes[activeIndex]){ nodes[activeIndex].classList.add('active'); nodes[activeIndex].scrollIntoView({block:'nearest'}); }
+    }
+    function chooseItem(it){ comboInput.value=it.no; kvPartno.textContent=it.no; closeList(); onPartnoChanged(it.no); }
+    function rebuildPartnoPicker(){ var db=getDB(); allParts=Object.keys(db).sort().map(function(no){ return { no:no, name:(db[no]&&db[no].partname)||'' }; }); renderList(filterParts(comboInput.value)); }
+
+    comboInput.addEventListener('focus', function(){ renderList(filterParts(comboInput.value)); openList(); });
+    comboInput.addEventListener('input', function(){ renderList(filterParts(comboInput.value)); openList(); });
+    comboToggle.addEventListener('click', function(){ if(combo.classList.contains('open')){ closeList(); } else { renderList(filterParts('')); openList(); comboInput.focus(); } });
+    comboInput.addEventListener('keydown', function(e){
+      if(!combo.classList.contains('open') && (e.key==='ArrowDown' || e.key==='ArrowUp')){ openList(); }
+      var items=comboList.querySelectorAll('.combo-item');
+      if(e.key==='ArrowDown'){ if(items.length){ activeIndex=Math.min(items.length-1, activeIndex+1); highlightActive(); e.preventDefault(); } }
+      else if(e.key==='ArrowUp'){ if(items.length){ activeIndex=Math.max(0, activeIndex-1); highlightActive(); e.preventDefault(); } }
+      else if(e.key==='Enter'){ if(activeIndex>=0 && items[activeIndex]){ items[activeIndex].dispatchEvent(new MouseEvent('mousedown')); e.preventDefault(); } }
+      else if(e.key==='Escape'){ closeList(); }
+    });
+    document.addEventListener('click', function(e){ if(!combo.contains(e.target)){ closeList(); } });
+
+    function setThumb(src){ if(!src){ thumb.innerHTML='<span style="font-size:.85rem;color:#9aa7b2">ไม่มีรูป</span>'; return; } thumb.innerHTML=''; var img=new Image(); img.src=src; img.alt='drawing preview'; thumb.appendChild(img); }
+    function previewBackground(){ var map={"#ffffff":"ขาว","#fffacd":"เหลือง","#add8e6":"ฟ้า","#ffc0cb":"ชมพู"}; var label=map[document.getElementById('bgcolor').value]||'ขาว'; kvBg.textContent=label; localStorage.setItem('pdf_bg_default',document.getElementById('bgcolor').value); thumb.style.backgroundColor=document.getElementById('bgcolor').value; }
+    function refreshStats(){ var lot=parseInt(inputLot.value,10); var pn=(comboInput.value||'').trim(); var per=getStoredPerBox(pn) || Math.max(1, parseInt(inputPerBox.value,10)||1); if(isFinite(lot) && lot>0){ var boxes=Math.ceil(lot/per); var last=lot - per*(boxes-1); statBoxes.textContent=boxes; statLastQty.textContent= last>0? last: per; } else { statBoxes.textContent=0; statLastQty.textContent='-'; } }
+    </script>
+
+    <script>
+    'use strict';
+    function showToast(message, duration){ duration = typeof duration === 'number' ? duration : 3000; var el = document.getElementById('toast'); if(!el) return; el.textContent = message; el.classList.add('show'); clearTimeout(showToast._t); showToast._t = setTimeout(function(){ el.classList.remove('show'); }, duration); }
+    function resetFormFields(){ document.getElementById('lot').value=''; document.getElementById('po').value=''; document.getElementById('perbox').value='100'; document.getElementById('packer').value=''; document.getElementById('date').valueAsDate=new Date(); comboInput.value=''; kvPartno.textContent='-'; kvPartname.textContent='-'; kvStatus.textContent='เลือก PART ก่อน'; if(kvPerbox) kvPerbox.textContent='-'; var inp=document.getElementById('perbox'); inp.disabled=false; inp.classList.remove('is-locked'); setThumb(null); refreshStats(); }
+    </script>
+
+    <script>
+    'use strict';
+    async function parseExcelFile(file){
+      return new Promise(function(resolve,reject){
+        var reader=new FileReader();
+        reader.onload=async function(e){
+          try{
+            var data=new Uint8Array(e.target.result);
+            var wb=XLSX.read(data,{type:'array'});
+            var ws=wb.Sheets[wb.SheetNames[0]];
+            var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+            var db=getDB();
+            for(var i=0;i<rows.length;i++){
+              var r=rows[i]||{};
+              var no=(r['PART NO']||r['Part No']||r['PARTNO']||'').toString().trim();
+              var name=(r['PART NAME']||r['Part Name']||r['NAME']||'').toString().trim();
+              var img=(r['IMAGE']||r['Image']||'').toString().trim();
+              var perRaw=(r['PER BOX']||r['PERBOX']||r['QTY/BOX']||r['QTY PER BOX']||r['PCS/BOX']||r['PCS PER BOX']||'');
+              var per=parseInt(String(perRaw).replace(/[^\d]/g,''),10);
+              if(!no) continue;
+              var imageData=null;
+              if(/^data:image\//i.test(img)) imageData=img; else if(/^https?:\/\//i.test(img)) imageData=await urlToDataURL(img);
+              db[no]=db[no]||{};
+              if(name) db[no].partname=name;
+              if(Number.isFinite(per)&&per>0) db[no].perbox=per;
+              if(imageData) db[no].imageData=imageData;
+            }
+            setDB(db);
+            resolve();
+          }catch(err){ reject(err); }
+        };
+        reader.onerror=reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function renderDBTable(){
+      var tbody=document.querySelector('#dbTable tbody'); if(!tbody) return;
+      var q=(document.getElementById('dbSearch')?.value||'').toLowerCase().trim();
+      var db=getDB();
+      var arr=Object.keys(db).sort().map(function(no){ return {no:no, name:db[no]?.partname||'', per:db[no]?.perbox||'', img:db[no]?.imageData||null}; });
+      if(q){ arr=arr.filter(function(x){ return x.no.toLowerCase().indexOf(q)>-1 || x.name.toLowerCase().indexOf(q)>-1; }); }
+      tbody.innerHTML='';
+      arr.slice(0,300).forEach(function(x,idx){
+        var tr=document.createElement('tr'); tr.className='tr-click';
+        tr.innerHTML='<td>'+ (idx+1) +'</td><td>'+ escapeHtml(x.no) +'</td><td>'+ escapeHtml(x.name) +'</td><td>'+ (x.per||'') +'</td><td>'+ (x.img?'✔️':'') +'</td>';
+        tr.addEventListener('click', function(){
+          document.getElementById('dbNo').value=x.no;
+          document.getElementById('dbName').value=x.name;
+          document.getElementById('dbPerBox').value=x.per||'';
+          document.getElementById('dbImgUrl').value='';
+          var f=document.getElementById('dbImgFile'); if(f) f.value='';
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function dbSaveHandler(){
+      var $=function(id){return document.getElementById(id)};
+      var no=$('dbNo').value.trim();
+      var name=$('dbName').value.trim();
+      var url=($('dbImgUrl').value||'').trim();
+      var file=$('dbImgFile').files && $('dbImgFile').files[0];
+      var per=parseInt(($('dbPerBox')&&$('dbPerBox').value||'').trim(),10);
+      if(!no){ alert('กรุณากรอก PART NO.'); return; }
+      var imageData=null;
+      try{
+        if(file){ imageData=await new Promise(function(ok,er){ var fr=new FileReader(); fr.onload=function(ev){ ok(ev.target.result); }; fr.onerror=er; fr.readAsDataURL(file); }); }
+        else if(url){ imageData=await urlToDataURL(url); if(!imageData) throw new Error('โหลดรูปจาก URL ไม่สำเร็จ'); }
+        var db=getDB(); db[no]=db[no]||{}; if(name) db[no].partname=name; if(imageData) db[no].imageData=imageData; if(Number.isFinite(per)&&per>0) db[no].perbox=per; else delete db[no].perbox;
+        setDB(db); rebuildPartnoPicker(); updateDBStat(); renderDBTable(); if((comboInput.value||'').trim()===no) onPartnoChanged(no);
+        showToast('บันทึกแล้ว: '+no,2000);
+      }catch(e){ console.error(e); alert('บันทึกไม่สำเร็จ'); }
+    }
+
+    function dbClearForm(){ var $=function(id){return document.getElementById(id)}; $('dbNo').value=''; $('dbName').value=''; $('dbPerBox').value=''; $('dbImgUrl').value=''; var f=$('dbImgFile'); if(f) f.value=''; }
+    function dbDeleteHandler(){ var no=(document.getElementById('dbNo').value||'').trim(); if(!no){ alert('ใส่ PART NO. ที่ต้องการลบ'); return; } if(!confirm('ยืนยันลบ '+no+' ?')) return; var db=getDB(); if(db[no]){ delete db[no]; setDB(db); localStorage.removeItem('partData_'+no); rebuildPartnoPicker(); updateDBStat(); renderDBTable(); showToast('ลบแล้ว: '+no,2000); if((comboInput.value||'').trim()===no){ comboInput.value=''; onPartnoChanged(''); } } }
+
+    document.getElementById('loadExcel').addEventListener('click', function(){ var f=(document.getElementById('excel').files||[])[0]; if(!f) return alert('กรุณาเลือกไฟล์ Excel ก่อน'); parseExcelFile(f).then(function(){ rebuildPartnoPicker(); renderDBTable(); showToast('อัปเดตฐานข้อมูลจาก Excel แล้ว',2000); var cur=(comboInput.value||'').trim(); if(cur) onPartnoChanged(cur); }).catch(function(e){ console.error(e); alert('อ่านไฟล์ไม่สำเร็จ'); }); });
+    document.getElementById('clearDB').addEventListener('click', function(){ localStorage.removeItem(DB_KEY); updateDBStat(); rebuildPartnoPicker(); renderDBTable(); alert('ล้างฐานข้อมูลแล้ว'); kvStatus.textContent='ฐานข้อมูลว่างเปล่า'; var inp=document.getElementById('perbox'); inp.disabled=false; inp.classList.remove('is-locked'); if(kvPerbox) kvPerbox.textContent='-'; });
+    </script>
+
+    <script>
+    'use strict';
+    (function init(){
+      var saved=localStorage.getItem('pdf_bg_default'); if(saved){ document.getElementById('bgcolor').value=saved; }
+      previewBackground();
+      var today=new Date(); document.getElementById('date').value = today.toISOString().slice(0,10);
+      updateDBStat(); rebuildPartnoPicker(); renderDBTable(); refreshStats();
+
+      if(document.getElementById('dbSave')){
+        document.getElementById('dbSave').addEventListener('click', dbSaveHandler);
+        document.getElementById('dbClearForm').addEventListener('click', dbClearForm);
+        document.getElementById('dbDelete').addEventListener('click', dbDeleteHandler);
+        document.getElementById('dbSearch').addEventListener('input', renderDBTable);
+      }
+
+      document.getElementById('bgcolor').addEventListener('change', previewBackground);
+      inputLot.addEventListener('input', refreshStats);
+      inputPerBox.addEventListener('input', refreshStats);
+
+      document.getElementById('btnDownload').addEventListener('click', downloadPDF);
+      document.getElementById('resetForm').addEventListener('click', function(){ kvStatus.textContent='รีเซ็ตแล้ว'; resetFormFields(); });
+      document.getElementById('clearMemory').addEventListener('click', function(){ var partno=comboInput.value.trim(); if(!partno) return alert('กรุณาเลือก PART NO. ก่อน'); localStorage.removeItem('partData_'+partno); kvStatus.textContent='ลบข้อมูลที่จำไว้แล้ว'; kvPartname.textContent='-'; setThumb(null); if(kvPerbox) kvPerbox.textContent='-'; var inp=document.getElementById('perbox'); inp.disabled=false; inp.classList.remove('is-locked'); });
+    })();
+
+    function onPartnoChanged(partno){
+      var data=getPartData(partno);
+      if(!data){ var db=getDB(); if(db[partno]){ data=db[partno]; savePartData(partno, data.partname||'-', data.imageData||null, data.perbox||null); } }
+      kvPartno.textContent=partno||'-';
+      if(data){ kvStatus.textContent='ดึงข้อมูลสำเร็จ'; kvPartname.textContent=data.partname||'-'; setThumb(data.imageData||null); }
+      else { kvStatus.textContent='ไม่พบข้อมูลสำหรับ PART นี้'; kvPartname.textContent='-'; setThumb(null); }
+
+      var p=getStoredPerBox(partno); var inp=document.getElementById('perbox');
+      if(p){ inp.value=p; inp.disabled=true; inp.classList.add('is-locked'); if(kvPerbox) kvPerbox.textContent=p; }
+      else { inp.disabled=false; inp.classList.remove('is-locked'); if(kvPerbox) kvPerbox.textContent='-'; }
+      refreshStats();
+    }
+
+    // Drag & Drop preview
+    ['dragenter','dragover','dragleave','drop'].forEach(function(evt){ thumb.addEventListener(evt, function(e){ e.preventDefault(); e.stopPropagation(); }); });
+    thumb.addEventListener('drop', function(e){
+      var dt=e.dataTransfer; if(!dt||!dt.files||!dt.files[0]) return;
+      var file=dt.files[0]; if(!file.type.startsWith('image/')) return alert('กรุณาวางไฟล์รูปภาพเท่านั้น');
+      var reader=new FileReader();
+      reader.onload=function(ev){ setThumb(ev.target.result); };
+      reader.readAsDataURL(file);
+    });
+
+    function downloadPDF(){
+      var lotStr=document.getElementById('lot').value.trim();
+      var partno=comboInput.value.trim();
+      var storedPer=getStoredPerBox(partno);
+      var perStr= storedPer? String(storedPer): document.getElementById('perbox').value.trim();
+      var po=document.getElementById('po').value.trim();
+      var date=document.getElementById('date').value;
+      var packer=document.getElementById('packer').value.trim();
+      if(!validateNumber(lotStr)||!validateNumber(perStr)||!po||!partno||!date){ alert('กรุณากรอกข้อมูลให้ถูกต้องและครบถ้วนก่อนดาวน์โหลด PDF'); return; }
+      var lot=parseInt(lotStr,10);
+      var perbox=Math.max(1, parseInt(perStr,10));
+      var bgHex=document.getElementById('bgcolor').value;
+      var partData=getPartData(partno) || getDB()[partno] || null;
+      if(!partData){ alert('ไม่พบ PART NO. นี้ในฐานข้อมูล โปรดอัปเดต Excel แล้วเลือกจากรายการ'); return; }
+      if(!getPartData(partno)) savePartData(partno, partData.partname||'-', partData.imageData||null, partData.perbox||null);
+      var processed=partData.imageData;
+      var go=function(){ generateAndDownload(lot, perbox, po, partno, (partData.partname||'-'), date, (processed||null), bgHex, packer); setTimeout(function(){ showToast('บันทึกข้อมูลแล้ว • พร้อมสำหรับรายการถัดไป', 3000); resetFormFields(); }, 300); };
+      go();
+    }
+
+    function generateAndDownload(qtyTotal, perbox, po, partno, partname, date, imageData, bgHex, packer){
+      var formattedDate=formatDate(date);
+      var boxes=Math.ceil(qtyTotal/perbox);
+      var imgMeta=null;
+      function go(){ generatePDF(qtyTotal, perbox, po, partno, partname, formattedDate, imageData, boxes, bgHex, packer, imgMeta); }
+      if(imageData){ loadImageMeta(imageData).then(function(m){ imgMeta=m; go(); }).catch(function(){ go(); }); } else { go(); }
+    }
+
+    function generatePDF(qtyTotal, perbox, po, partno, partname, date, imageData, boxes, bgHex, packer, imgMeta){
+      var jsPDFRef=window.jspdf; var jsPDF=jsPDFRef.jsPDF; var doc=new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+      Promise.all([
+        fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf').then(function(res){ return res.arrayBuffer(); }),
+        fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Bold.ttf').then(function(res){ return res.arrayBuffer(); })
+      ]).then(function(arr){
+        doc.addFileToVFS('THSarabun.ttf', arrayBufferToBase64(arr[0])); doc.addFont('THSarabun.ttf','THSarabun','normal');
+        doc.addFileToVFS('THSarabun-Bold.ttf', arrayBufferToBase64(arr[1])); doc.addFont('THSarabun-Bold.ttf','THSarabun','bold'); sarabunLoaded=true;
+      }).catch(function(err){ console.warn('โหลดฟอนต์ TH Sarabun ไม่สำเร็จ ใช้ฟอนต์มาตรฐานแทน',err); }).finally(function(){
+        var labelWidth=140, labelHeight=95, marginLeft=10, marginTop=10, labelsPerPage=4;
+        var bg=hexToRgb(bgHex||'#ffffff');
+        for(var i=0;i<boxes;i++){
+          if(i>0 && i%labelsPerPage===0) doc.addPage();
+          var qty=(i<boxes-1)? perbox : (qtyTotal - perbox*(boxes-1));
+          var x=marginLeft + (i%2)*(labelWidth+5);
+          var y=marginTop + Math.floor((i%labelsPerPage)/2)*(labelHeight+5);
+          doc.setFillColor(bg.r,bg.g,bg.b); doc.rect(x,y,labelWidth,labelHeight,'F');
+          doc.setDrawColor(0); doc.setLineWidth(0.2); doc.rect(x,y,labelWidth,labelHeight);
+          doc.line(x,y+22,x+labelWidth,y+22); doc.line(x,y+30,x+labelWidth,y+30); doc.line(x,y+38,x+labelWidth,y+38); doc.line(x,y+46,x+labelWidth,y+46);
+          doc.line(x+78,y+8,x+labelWidth,y+8); doc.line(x+78,y+15,x+labelWidth,y+15); doc.line(x+43,y+22,x+43,y+46); doc.line(x+78,y,x+78,y+46);
+          doc.line(x+105,y+0,x+105,y+30); doc.line(x+120,y+22,x+120,y+30);
+
+          // SCAN (Auto-fit width 36mm)
+          doc.setTextColor(255,0,0);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); }
+          var maxScanWidth=36, base=30; doc.setFontSize(base);
+          var w=doc.getTextWidth('SCAN'); var size=22;
+          if(w && w>0){ size=Math.min(24, Math.max(16, base*(maxScanWidth/w))); }
+          doc.setFontSize(size);
+          doc.text('SCAN', x+3, y+13);
+
+          doc.setFontSize(8); doc.setTextColor(0,0,255); if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('บริษัท เอสเอ็นซี ครีเอติวิตี้ แอนโทโลจี จำกัด', x+25, y+10);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text('SNC CREATIVITY ANTHOLOGY CO.,LTD', x+25, y+14);
+          doc.setFontSize(12); doc.setTextColor(0,0,0); if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); }
+          doc.text('CUSTOMER :             FGT', x+80, y+6); doc.text('PART NO  :', x+80, y+13); doc.text('PART NAME:', x+80, y+20);
+          doc.setFontSize(8); if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(partname||'-', x+107, y+19.5, {maxWidth:(labelWidth-110)+x});
+          doc.setFontSize(12); if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(String(partno), x+110, y+13);
+          doc.setFontSize(13); if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text("Q'TY:", x+14, y+28);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(String(qty)+' PCS', x+53, y+28);
+          if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('LOT: '+String(qtyTotal), x+80, y+28); doc.text('BOX:', x+108, y+28);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(String(i+1)+'/'+String(boxes)+' ', x+125, y+28);
+          if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('Production Date:', x+3, y+36);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(String(date), x+48, y+36);
+          if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('Delivery Date:', x+6, y+44);
+          if(sarabunLoaded){ doc.setFont('THSarabun','bold'); } else { doc.setFont('helvetica','bold'); } doc.text(String(date), x+48, y+44);
+          if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('PO:   '+String(po), x+80, y+36);
+          if(sarabunLoaded){ doc.setFont('THSarabun','normal'); } else { doc.setFont('helvetica','normal'); } doc.text('PACKED BY: '+String(packer||''), x+80, y+44);
+
+          // Drawing frame
+          var frameX=x+5, frameY=y+58, frameW=labelWidth-20, frameH=32; doc.setFontSize(12); doc.text('Drawing', x+2, y+54);
+          if(imageData){ try{ if(imgMeta){ var rW=imgMeta.w, rH=imgMeta.h; var scale=Math.min(frameW/rW, frameH/rH); var drawW=rW*scale; var drawH=rH*scale; var dx=frameX+(frameW-drawW)/2; var dy=frameY+(frameH-drawH)/2; doc.addImage(imageData,'PNG',dx,dy,drawW,drawH); } else { doc.addImage(imageData,'PNG',frameX,frameY,frameW,frameH); } }catch(e){ console.warn('ใส่รูปไม่สำเร็จ',e); } }
+
+          // QR bottom-right (16mm)
+          var qrText =
+            "PART NO: " + String(partno) + "\n" +
+            "PART NAME: " + String(partname || '-') + "\n" +
+            "PO: " + String(po) + "\n" +
+            "LOT: " + String(qtyTotal) + "\n" +
+            "Q'TY: " + String(qty) + " PCS\n" +
+            "BOX: " + String(i+1) + "/" + String(boxes);
+          var qrPx = 240; // high-res for print
+          var qrDataUrl = makeQRDataUrl(qrText, qrPx);
+          if(qrDataUrl){
+            var qrSize = 16; // mm
+            var qrX = x + labelWidth - qrSize - 3;
+            var qrY = y + labelHeight - qrSize - 3;
+            try{ doc.addImage(qrDataUrl,'PNG',qrX,qrY,qrSize,qrSize); }catch(e){ console.warn('วางรูป QR ไม่สำเร็จ', e); }
+          }
+        }
+        var safeDate=String(date||'').replace(/\//g,'-'); var filename='label_'+(partno||'tag')+'_'+safeDate+'.pdf'; doc.save(filename);
+      });
+    }
+    </script>
+  </template>
+  <!-- END: embedded readable source -->
+
+  <!-- Boot: Blob loader to execute the template scripts -->
+  <script type="module">
+    const tpl=document.getElementById('bundle-src');
+    const frag=tpl.content.cloneNode(true);
+    const parts=[...frag.querySelectorAll('script')].map(s=>s.textContent);
+    const code=parts.join("\n\n");
+    const blob=new Blob([code],{type:'text/javascript'});
+    const url=URL.createObjectURL(blob);
+    const s=document.createElement('script');
+    s.src=url; s.async=false;
+    document.body.appendChild(s);
+    s.onload=()=>{ URL.revokeObjectURL(url); tpl.remove(); };
+    s.onerror=()=>{ console.error('โหลดสคริปต์รวมไม่สำเร็จ'); URL.revokeObjectURL(url); };
+  </script>
+
+</body>
+</html>
