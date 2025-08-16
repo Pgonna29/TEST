@@ -14,13 +14,14 @@
     header h1{ margin:0; font-size:18px }
     .back{ text-decoration:none; color:var(--text); border:1px solid var(--border); border-radius:12px; padding:8px 12px }
     .back:hover{ transform:translateY(-1px); background:#00000008 }
-    .hbtn{ appearance:none; border:1px solid var(--accent); color:#fff; background:var(--accent); padding:8px 12px; border-radius:12px; cursor:pointer; margin-left:auto }
+    .hbtn{ margin-left:auto; appearance:none; border:1px solid var(--accent); color:#fff; background:var(--accent); padding:8px 12px; border-radius:12px; cursor:pointer }
 
     main{ max-width:100%; margin:0; padding:12px }
     .card{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:0 10px 40px #00000012 }
     .btn{ appearance:none; border:1px solid var(--border); background:transparent; color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer }
     .btn.danger{ background:#ef4444; color:#fff; border-color:transparent }
 
+    /* Table */
     table{ width:100%; border-collapse:separate; border-spacing:0; border-radius:14px; overflow:hidden; border:1px solid var(--border) }
     thead th{ background:#f1f5f9; font-weight:700; font-size:14px; padding:10px; border-bottom:1px solid var(--border); text-align:left }
     tbody td{ padding:10px; border-bottom:1px solid var(--border); font-size:14px }
@@ -36,7 +37,6 @@
     .modal.show{ display:flex }
     .panel{ width:min(980px,96vw); height:min(720px,88vh); background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 40px 120px rgba(0,0,0,.35); overflow:hidden; display:flex; flex-direction:column }
     .topbar{ display:flex; align-items:center; gap:8px; padding:10px; border-bottom:1px solid var(--border); background:#f8fafc }
-
     .scanBox{ position:relative; border-radius:12px; overflow:hidden; border:1px dashed var(--border); background:#000; height:min(72vh,520px) }
     #scanVideo{ width:100%; height:100%; object-fit:cover; display:block }
     #scanOverlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none }
@@ -50,7 +50,7 @@
 <body>
   <header>
     <a class="back" href="index.html">← หน้าหลัก</a>
-    <a class="back" href="wipfg.html">← เมนูย่อย</a>
+    <a class="back" href="menu.html">← เมนูย่อย</a>
     <h1>REPORT FG – รายงานสินค้าเสร็จ (Realtime)</h1>
     <button class="hbtn" id="openScan">📷 เปิดสแกน (มือถือ)</button>
   </header>
@@ -58,7 +58,7 @@
   <main>
     <section class="card">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <strong>รายการ REPORT FG (บันทึกลงเครื่องอัตโนมัติ)</strong>
+        <strong>รายการ REPORT FG (บันทึกลงเครื่องอัตโนมัติ + คลาวด์)</strong>
         <span class="chip" id="chipCount">จำนวน 0 รายการ</span>
         <span class="chip" id="chipQty">รวม Q'TY = 0</span>
         <span class="chip" id="chipBox">BOX ล่าสุด: -</span>
@@ -80,17 +80,17 @@
       <div class="actions" style="margin-top:12px">
         <button class="btn" id="btnExport">⬇️ ส่งออก CSV</button>
         <button class="btn" id="btnPrint">🖨️ พิมพ์</button>
-        <button class="btn danger" id="btnClearAll">🗑️ ล้างทั้งหมด</button>
+        <button class="btn danger" id="btnClearAll">🗑️ ล้างทั้งหมด (เฉพาะเครื่องนี้)</button>
       </div>
 
-      <div class="small">ข้อมูลเก็บไว้ใน <code>localStorage['fg:records']</code>. ล้างเบราว์เซอร์หรือใช้เครื่องอื่นจะไม่เห็นข้อมูลชุดนี้</div>
+      <div class="small">แหล่งข้อมูล: คลาวด์ Firestore (พร้อมกันหลายเครื่อง) + สำรองใน <code>localStorage['fg:records']</code> บนเครื่องนี้</div>
     </section>
   </main>
 
   <!-- Scanner Modal -->
   <div class="modal" id="scanModal" aria-hidden="true">
     <div class="panel">
-      <div class="topbar"><strong>สแกนด้วยกล้องมือถือ</strong><button class="btn" id="closeScan">ปิด</button></div>
+      <div class="topbar"><strong>สแกนด้วยกล้อง</strong><button class="btn" id="closeScan">ปิด</button></div>
       <div class="scanBox">
         <video id="scanVideo" playsinline muted></video>
         <canvas id="scanOverlay"></canvas>
@@ -102,51 +102,95 @@
   <div class="toast" id="toast">บันทึกแล้ว</div>
 
 <script>
+// -------- Core (Local render) --------
 (function(){
-  const FKEY='fg:records', SCANKEY='taggen:last_scan';
+  const FKEY='fg:records';
+  const SCANKEY='taggen:last_scan';
   const $=id=>document.getElementById(id);
-  const btnExport=$('btnExport'), btnPrint=$('btnPrint'), btnClearAll=$('btnClearAll');
   const tbody=$('tbody'), chipCount=$('chipCount'), chipQty=$('chipQty'), chipBox=$('chipBox'), chipLast=$('chipLast');
+  const btnExport=$('btnExport'), btnPrint=$('btnPrint'), btnClearAll=$('btnClearAll');
   const openScan=$('openScan'), scanModal=$('scanModal'), closeScan=$('closeScan');
-  const scanVideo=$('scanVideo'), scanOverlay=$('scanOverlay'), sctx=scanOverlay.getContext('2d');
-  const toast=$('toast');
+  const scanVideo=$('scanVideo'), scanOverlay=$('scanOverlay');
+  const sctx=scanOverlay.getContext('2d');
+  const ROOM = new URLSearchParams(location.search).get('room') || 'default';
 
-  const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return{d:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`,t:`${p(d.getHours())}:${p(d.getMinutes())}`}}
-  const showToast=(m='บันทึกแล้ว')=>{toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1400)}
+  const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return{d:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`,t:`${p(d.getHours())}:${p(d.getMinutes())}`}};
+  const toast=(m='บันทึกแล้ว')=>{const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1400)};
   function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.value=0.0001;g.gain.exponentialRampToValueAtTime(0.2,a.currentTime+0.01);o.start();setTimeout(()=>{g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.02);o.stop(a.currentTime+0.05)},120)}catch{} if(navigator.vibrate) navigator.vibrate(60)}
 
-  const load=()=>{try{return JSON.parse(localStorage.getItem(FKEY)||'[]')}catch{return []}}
-  const save=l=>{try{localStorage.setItem(FKEY,JSON.stringify(l))}catch{}}
+  // Local storage helpers (fallback)
+  const load=()=>{try{return JSON.parse(localStorage.getItem(FKEY)||'[]')}catch{return []}};
+  const save=l=>{try{localStorage.setItem(FKEY,JSON.stringify(l))}catch{}};
 
-  function render(){const list=load();tbody.innerHTML='';let total=0;list.forEach((it,i)=>{total+=Number(it.qty)||0;const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${it.date||''}</td><td>${it.time||''}</td><td>${it.partNo||''}</td><td>${it.partName||''}</td><td>${it.po||''}</td><td>${it.lot||''}</td><td class='right'>${it.qty||''}</td><td>${it.box||''}</td><td>${it.line||''}</td><td>${it.operator||''}</td><td><button class='btn' data-del='${i}'>ลบ</button></td>`;tbody.appendChild(tr)});chipCount.textContent=`จำนวน ${list.length} รายการ`;chipQty.textContent=`รวม Q'TY = ${total}`;chipBox.textContent=`BOX ล่าสุด: ${list.length?(list[list.length-1].box||'-'):'-'}`;}
+  function renderLocal(){const list=load();renderRows(list)}
+  function renderRows(list){tbody.innerHTML='';let total=0;list.forEach((it,i)=>{total+=Number(it.qty)||0;const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${it.date||''}</td><td>${it.time||''}</td><td>${it.partNo||''}</td><td>${it.partName||''}</td><td>${it.po||''}</td><td>${it.lot||''}</td><td class='right'>${it.qty||''}</td><td>${it.box||''}</td><td>${it.line||''}</td><td>${it.operator||''}</td><td></td>`;tbody.appendChild(tr)});chipCount.textContent=`จำนวน ${list.length} รายการ`;chipQty.textContent=`รวม Q'TY = ${total}`;chipBox.textContent=`BOX ล่าสุด: ${list.length?(list[list.length-1].box||'-'):'-'}`}
 
-  function addFromParsed(p){const t=today();const rec={date:t.d,time:t.t,partNo:p.partNo||'',partName:p.partName||'',po:p.po||'',lot:p.lot||'',qty:p.qty||'',box:p.box||'',line:'',operator:'',note:''};const list=load();list.push(rec);save(list);render();chipLast.textContent=`สแกนล่าสุด: ${rec.partNo||'-'} (QTY ${rec.qty||'-'})`}
+  function addLocal(rec){const list=load();list.push(rec);save(list);renderLocal()}
 
-  function exportCSV(){const list=load();if(!list.length){alert('ยังไม่มีข้อมูล');return}const heads=['date','time','partNo','partName','po','lot','qty','box','line','operator','note'];const rows=[heads.join(',')];list.forEach(it=>rows.push(heads.map(k=>`\"${String(it[k]??'').replace(/\"/g,'\"\"')}\"`).join(',')));const csv=rows.join('\\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');const p=n=>String(n).padStart(2,'0');const d=new Date();a.download=`fg_report_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.csv`;a.href=URL.createObjectURL(blob);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+  // CSV / Print / Clear (local only)
+  btnExport.onclick=()=>{const list=load();if(!list.length) return alert('ยังไม่มีข้อมูล');const heads=['date','time','partNo','partName','po','lot','qty','box','line','operator','note'];const rows=[heads.join(',')];list.forEach(it=>rows.push(heads.map(k=>`"${String(it[k]??'').replace(/"/g,'""')}"`).join(',')));const csv=rows.join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');const p=n=>String(n).padStart(2,'0');const d=new Date();a.download=`fg_report_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.csv`;a.href=URL.createObjectURL(blob);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+  btnPrint.onclick=()=>window.print();
+  btnClearAll.onclick=()=>{if(confirm('ล้างข้อมูลทั้งหมดบนเครื่องนี้?')){save([]);renderLocal()}};
 
-  render();
-  tbody.addEventListener('click',e=>{const b=e.target.closest('button[data-del]');if(!b) return;const i=+b.dataset.del;const list=load();list.splice(i,1);save(list);render()});
-  btnExport.onclick=exportCSV; btnPrint.onclick=()=>window.print(); btnClearAll.onclick=()=>{if(confirm('ล้างข้อมูลทั้งหมด?')){save([]);render()}};
+  // Scanner (camera in-page)
+  let sStream=null,sDetector=null,sAnim=0,sUsingBD=('BarcodeDetector' in window),sLast=null;
+  function normalizeKey(k){return String(k).toLowerCase().replace(/[\s'"()_\-\.]/g,'').replace(/q'ty|qty|qtty|qyt|quantity/,'qty')}
+  function normalizeObject(obj){const out={};for(const [k,v]of Object.entries(obj||{})){const key=normalizeKey(k);const val=String(v??'').trim();if(['partno','pn','pno'].includes(key))out.partNo=val;else if(['partname','name','pname'].includes(key))out.partName=val;else if(['po','pono','purchaseorder'].includes(key))out.po=val;else if(['lot','lotno','lotnumber','batch','batchno'].includes(key))out.lot=val;else if(['qty'].includes(key))out.qty=val;else if(['box','boxno','carton','ctn','cartonno'].includes(key))out.box=val;}return out}
+  function parsePayload(text){const res={partNo:'',partName:'',po:'',lot:'',qty:'',box:''};if(!text||!text.trim())return res;let t=text.trim();try{if(t.startsWith('{')){const o=JSON.parse(t);return {...res,...normalizeObject(o)}}}catch{}const pairs=t.split(/[\n;]+/g).map(s=>s.trim()).filter(Boolean);const acc={};let used=0;for(const line of pairs){const m=line.match(/^\s*([^:=,]+)\s*[:=]\s*(.+)$/);if(m){acc[m[1].trim()]=m[2].trim();used++}}if(used)return{...res,...normalizeObject(acc)};const csv=t.split(/,\s*/g);if(csv.length>=6){[res.partNo,res.partName,res.po,res.lot,res.qty,res.box]=csv;return res}res.partNo=t;return res}
 
-  // --- Scanner ---
-  let sStream=null,sDetector=null,sAnim=0,sUsingBD=('BarcodeDetector'in window),sLast=null;
   async function startScanner(){stopScanner();const cons={video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}};sStream=await navigator.mediaDevices.getUserMedia(cons);scanVideo.srcObject=sStream;await scanVideo.play();scanOverlay.width=scanVideo.videoWidth;scanOverlay.height=scanVideo.videoHeight;if(sUsingBD){try{sDetector=new BarcodeDetector({formats:['qr_code']})}catch(e){sUsingBD=false;sDetector=null}}sLoop()}
   function stopScanner(){cancelAnimationFrame(sAnim);if(sStream){sStream.getTracks().forEach(t=>t.stop())}sStream=null;sDetector=null;sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height)}
-  function sDraw(pts){if(!pts) return;sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height);sctx.lineWidth=4;sctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent');sctx.beginPath();sctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++) sctx.lineTo(pts[i].x,pts[i].y);sctx.closePath();sctx.stroke()}
-  function sHandle(text,pts){if(!text||text===sLast) return;sLast=text;sDraw(pts);const p=parsePayload(text);try{localStorage.setItem(SCANKEY,JSON.stringify(p))}catch{};beep();addFromParsed(p);showToast('เพิ่มรายการอัตโนมัติ')}
-  async function sLoop(){if(!scanVideo||scanVideo.readyState<2){sAnim=requestAnimationFrame(sLoop);return}if(scanOverlay.width!==scanVideo.videoWidth){scanOverlay.width=scanVideo.videoWidth;scanOverlay.height=scanVideo.videoHeight}try{if(sUsingBD&&sDetector){const codes=await sDetector.detect(scanVideo);if(codes?.length){const c=codes[0];const pts=c.cornerPoints?.map(p=>({x:p.x,y:p.y}))||null;sHandle(c.rawValue||'',pts)}else{sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height)}}else if(window.jsQR){const c=document.createElement('canvas');c.width=scanVideo.videoWidth;c.height=scanVideo.videoHeight;const cx=c.getContext('2d');cx.drawImage(scanVideo,0,0,c.width,c.height);const img=cx.getImageData(0,0,c.width,c.height);const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});if(code){const l=code.location;const pts=l?[{x:l.topLeftCorner.x,y:l.topLeftCorner.y},{x:l.topRightCorner.x,y:l.topRightCorner.y},{x:l.bottomRightCorner.x,y:l.bottomRightCorner.y},{x:l.bottomLeftCorner.x,y:l.bottomLeftCorner.y}]:null;sHandle(code.data,pts)}else{sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height)}}}catch(e){console.error(e)}sAnim=requestAnimationFrame(sLoop)}
-  function openScanner(){scanModal.classList.add('show');startScanner().catch(e=>alert('เปิดกล้องไม่สำเร็จ\\n'+e))}
-  function closeScanner(){stopScanner();scanModal.classList.remove('show')}
-  openScan.addEventListener('click',openScanner); closeScan.addEventListener('click',closeScanner);
+  function draw(pts){if(!pts)return;sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height);sctx.lineWidth=4;sctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent');sctx.beginPath();sctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)sctx.lineTo(pts[i].x,pts[i].y);sctx.closePath();sctx.stroke()}
+  function onDecode(text,pts){if(!text||text===sLast)return;sLast=text;draw(pts);const p=parsePayload(text);const t=today();const rec={date:t.d,time:t.t,partNo:p.partNo,partName:p.partName,po:p.po,lot:p.lot,qty:p.qty,box:p.box,line:ROOM,operator:'',note:''};try{localStorage.setItem(SCANKEY,JSON.stringify(p))}catch{}chipLast.textContent=`สแกนล่าสุด: ${rec.partNo||'-'} (QTY ${rec.qty||'-'})`;beep();addLocal(rec);addRecordCloud(rec);toast('เพิ่มรายการอัตโนมัติ')}
+  async function loop(){if(!scanVideo||scanVideo.readyState<2){sAnim=requestAnimationFrame(loop);return}if(scanOverlay.width!==scanVideo.videoWidth){scanOverlay.width=scanVideo.videoWidth;scanOverlay.height=scanVideo.videoHeight}try{if(sUsingBD&&sDetector){const codes=await sDetector.detect(scanVideo);if(codes?.length){const c=codes[0];const pts=c.cornerPoints?.map(p=>({x:p.x,y:p.y}))||null;onDecode(c.rawValue||'',pts)}else{sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height)}}else if(window.jsQR){const c=document.createElement('canvas');c.width=scanVideo.videoWidth;c.height=scanVideo.videoHeight;const cx=c.getContext('2d');cx.drawImage(scanVideo,0,0,c.width,c.height);const img=cx.getImageData(0,0,c.width,c.height);const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});if(code){const l=code.location;const pts=l?[{x:l.topLeftCorner.x,y:l.topLeftCorner.y},{x:l.topRightCorner.x,y:l.topRightCorner.y},{x:l.bottomRightCorner.x,y:l.bottomRightCorner.y},{x:l.bottomLeftCorner.x,y:l.bottomLeftCorner.y}]:null;onDecode(code.data,pts)}else{sctx.clearRect(0,0,scanOverlay.width,scanOverlay.height)}}}catch(e){console.error(e)}sAnim=requestAnimationFrame(loop)}
+  const sLoop=loop;
 
-  // parse helpers
-  function normalizeKey(k){return String(k).toLowerCase().replace(/[\\s'\"()_\\-\\.]/g,'').replace(/q'ty|qty|qtty|qyt|quantity/,'qty')}
-  function normalizeObject(obj){const out={};for(const [k,v]of Object.entries(obj||{})){const key=normalizeKey(k);const val=String(v??'').trim();if(['partno','pn','pno'].includes(key))out.partNo=val;else if(['partname','name','pname'].includes(key))out.partName=val;else if(['po','pono','purchaseorder'].includes(key))out.po=val;else if(['lot','lotno','lotnumber','batch','batchno'].includes(key))out.lot=val;else if(['qty'].includes(key))out.qty=val;else if(['box','boxno','carton','ctn','cartonno'].includes(key))out.box=val;}return out}
-  function parsePayload(text){const res={partNo:'',partName:'',po:'',lot:'',qty:'',box:''};if(!text||!text.trim())return res;let t=text.trim();try{if(t.startsWith('{')){const o=JSON.parse(t);return {...res,...normalizeObject(o)}}}catch{}const pairs=t.split(/[\\n;]+/g).map(s=>s.trim()).filter(Boolean);const acc={};let used=0;for(const line of pairs){const m=line.match(/^\\s*([^:=,]+)\\s*[:=]\\s*(.+)$/);if(m){acc[m[1].trim()]=m[2].trim();used++}}if(used)return{...res,...normalizeObject(acc)};const csv=t.split(/,\\s*/g);if(csv.length>=6){[res.partNo,res.partName,res.po,res.lot,res.qty,res.box]=csv;return res}res.partNo=t;return res}
+  document.getElementById('openScan').onclick=()=>{scanModal.classList.add('show');startScanner().catch(e=>alert('เปิดกล้องไม่สำเร็จ\n'+e))};
+  document.getElementById('closeScan').onclick=()=>{stopScanner();scanModal.classList.remove('show')};
 
-  // Fallback: postMessage จากหน้าสแกนอื่น ๆ
-  window.addEventListener('message',ev=>{const d=ev.data;if(!d||d.type!=='qr-decoded'||!d.text)return;const p=parsePayload(d.text);try{localStorage.setItem(SCANKEY,JSON.stringify(p))}catch{};beep();addFromParsed(p);showToast('เพิ่มรายการอัตโนมัติ')});
+  // Initial render (local ifยังไม่เชื่อมคลาวด์)
+  renderLocal();
+
+  // Expose for cloud module below
+  window.__FG_RENDER_ROWS__ = renderRows;
+  window.__FG_ADD_LOCAL__   = addLocal;
+  window.__FG_ROOM__        = ROOM;
 })();
+</script>
+
+<!-- -------- Firebase (Realtime cloud sync) -------- -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDdHCxweV-gNsJadwvPat7itPHtqPjI09c",
+    authDomain: "fg-realtime.firebaseapp.com",
+    projectId: "fg-realtime",
+    storageBucket: "fg-realtime.firebasestorage.app",
+    messagingSenderId: "868246817558",
+    appId: "1:868246817558:web:92ac8cf055e57fc7f0de37"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const auth = getAuth(app);
+  await signInAnonymously(auth);
+
+  const ROOM = window.__FG_ROOM__ || 'default';
+  const COL  = collection(db, 'fg_records');
+
+  window.addRecordCloud = async (rec) => {
+    try { await addDoc(COL, { ...rec, room: ROOM, ts: serverTimestamp() }); }
+    catch(e){ console.error('addDoc failed', e); }
+  };
+
+  const q = query(COL, where('room','==',ROOM), orderBy('ts','asc'));
+  onSnapshot(q, (snap)=>{
+    const list=[]; snap.forEach(doc=> list.push(doc.data()));
+    if(window.__FG_RENDER_ROWS__) window.__FG_RENDER_ROWS__(list);
+  });
 </script>
 </body>
 </html>
